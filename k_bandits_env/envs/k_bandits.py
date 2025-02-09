@@ -133,7 +133,8 @@ class BanditTenArmedGaussian(BanditEnv):
 
         # Create a list of callables, each generating a reward ~ N(mean_i, 1).
         r_dist: List[Callable[[], float]] = [
-            (lambda: float(np.random.normal(loc=mean_i, scale=1.0))) for mean_i in means
+            (lambda mean=mean_i: float(np.random.normal(loc=mean, scale=1.0)))
+            for mean_i in means
         ]
 
         super().__init__(k=k, r_dist=r_dist, render_mode=render_mode)
