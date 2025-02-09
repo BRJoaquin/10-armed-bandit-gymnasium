@@ -129,6 +129,7 @@ class BanditTenArmedGaussian(BanditEnv):
     def __init__(self, render_mode: Optional[str] = None) -> None:
         k = 10  # 10-armed
         means = np.random.normal(loc=0.0, scale=1.0, size=k)
+        print("True means (q*):", means)
 
         # Create a list of callables, each generating a reward ~ N(mean_i, 1).
         r_dist: List[Callable[[], float]] = [
