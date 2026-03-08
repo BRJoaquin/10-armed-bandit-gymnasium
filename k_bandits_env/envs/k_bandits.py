@@ -1,8 +1,8 @@
 import gymnasium as gym
-import numpy as np
 from gymnasium import spaces
+from gymnasium.envs.registration import register
+import numpy as np
 from typing import Optional, Callable, List, Dict, Tuple
-
 
 class BanditEnv(gym.Env):
     """
@@ -17,7 +17,7 @@ class BanditEnv(gym.Env):
       - balance: total cumulative reward so far.
     """
 
-    metadata = {"render_modes": ["human", None]}
+    metadata = {"render_modes": ["human"], "render_fps": 1}
 
     def __init__(
         self,
@@ -30,7 +30,7 @@ class BanditEnv(gym.Env):
         # validation
         assert isinstance(k, int) and k > 0, "k must be a positive integer"
         assert len(r_dist) == k, "r_dist must be a list of callables of length k"
-        assert render_mode in self.metadata["render_modes"], (
+        assert render_mode is None or render_mode in self.metadata["render_modes"], (
             "render_mode must be either None or 'human'"
         )
 
@@ -69,7 +69,6 @@ class BanditEnv(gym.Env):
         because there's no environment state to reset otherwise.
         """
         super().reset(seed=seed)
-        np.random.seed(seed)
         self.current_step = 0
         self.balance = 0.0
         if self.render_mode == "human":
@@ -123,18 +122,23 @@ class BanditTenArmedGaussian(BanditEnv):
       - Actual reward ~ N(q*(i), 1) each time it is pulled.
 
     The r_dist is thus a list of lambdas/functions,
-    each returning np.random.normal(mean_i, 1).
+    each returning self.np_random.normal(mean_i, 1).
     """
 
-    def __init__(self, render_mode: Optional[str] = None) -> None:
+    def __init__(self, print_true_values: bool = False, render_mode: Optional[str] = None) -> None:
         k = 10  # 10-armed
         means = np.random.normal(loc=0.0, scale=1.0, size=k)
-        print("True means (q*):", means)
+        
+        if print_true_values:
+            print("True means (q*):", means)
 
         # Create a list of callables, each generating a reward ~ N(mean_i, 1).
+        # We use self.np_random (Gymnasium's seeded RNG) instead of np.random
+        # to ensure reproducibility when reset(seed=...) is called.
         r_dist: List[Callable[[], float]] = [
-            (lambda mean=mean_i: float(np.random.normal(loc=mean, scale=1.0)))
+            (lambda mean=mean_i: float(self.np_random.normal(loc=mean, scale=1.0)))
             for mean_i in means
         ]
 
+        self.true_means = means
         super().__init__(k=k, r_dist=r_dist, render_mode=render_mode)
